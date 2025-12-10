@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: streamflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: streamflow
+      POSTGRES_PASSWORD: streamflow123
+      POSTGRES_DB: streamflow_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - streamflow-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  streamflow-network:
+    driver: bridge

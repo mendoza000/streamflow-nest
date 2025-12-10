@@ -1,0 +1,172 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  services  Service[]
+  providers Provider[]
+  accounts  Account[]
+  customers Customer[]
+  orders    Order[]
+
+  @@map("users")
+}
+
+model Service {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  basePrice   Decimal  @db.Decimal(10, 2)
+  logoUrl     String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  userId   String
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accounts Account[]
+
+  @@map("services")
+}
+
+model Provider {
+  id          String   @id @default(uuid())
+  name        String
+  phoneNumber String?
+  notes       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  userId   String
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accounts Account[]
+
+  @@map("providers")
+}
+
+model Account {
+  id               String        @id @default(uuid())
+  email            String
+  password         String
+  purchasePrice    Decimal?      @db.Decimal(10, 2)
+  purchaseDate     DateTime      @default(now())
+  expirationDate   DateTime?
+  status           AccountStatus @default(AVAILABLE)
+  totalScreens     Int           @default(1)
+  availableScreens Int           @default(1)
+  isFullAccount    Boolean
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  providerId String?
+  provider   Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  orderItems OrderItem[]
+
+  @@map("accounts")
+}
+
+// clients and resellers
+model Customer {
+  id         String   @id @default(uuid())
+  name       String
+  phone      String?
+  isReseller Boolean  @default(false)
+  discount   Decimal? @db.Decimal(5, 2) // Porcentaje de descuento para revendedores
+  notes      String?  @db.Text
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  orders Order[]
+
+  @@map("customers")
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  orderNumber String      @unique // Número de orden legible (ORD-001)
+  totalAmount Decimal     @db.Decimal(10, 2)
+  discount    Decimal?    @db.Decimal(10, 2)
+  finalAmount Decimal     @db.Decimal(10, 2)
+  status      OrderStatus @default(PENDING)
+
+  // Información de pago
+  paymentMethod   String? // 'binance', 'zelle', 'paypal', etc.
+  merchantTradeNo String?   @unique // Para Binance u otros gateways
+  paidAt          DateTime?
+
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  items OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id    String  @id @default(uuid())
+  price Decimal @db.Decimal(10, 2) // Precio al momento de la venta
+
+  saleType      SaleType @default(SCREEN) // SCREEN o FULL_ACCOUNT
+  profileNumber String? // Número de perfil si es venta por pantalla 
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  accountId String  @unique // Una cuenta solo puede venderse una vez
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@map("order_items")
+}
+
+enum AccountStatus {
+  AVAILABLE
+  SOLD
+  RESERVED
+  EXPIRED
+  BANNED
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+enum SaleType {
+  SCREEN
+  FULL_ACCOUNT
+}
