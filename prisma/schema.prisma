@@ -101,6 +101,11 @@ model Customer {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // Relación jerárquica: Revendedor -> Clientes
+  resellerId String? // ID del revendedor al que pertenece (null si es revendedor o cliente directo)
+  reseller   Customer?  @relation("ResellerToClients", fields: [resellerId], references: [id], onDelete: SetNull)
+  clients    Customer[] @relation("ResellerToClients") // Clientes que tiene este revendedor
+
   orders Order[]
 
   @@map("customers")
@@ -139,7 +144,7 @@ model OrderItem {
   price Decimal @db.Decimal(10, 2) // Precio al momento de la venta
 
   saleType      SaleType @default(SCREEN) // SCREEN o FULL_ACCOUNT
-  profileNumber String? // Número de perfil si es venta por pantalla 
+  profileNumber Int? // Número de perfil si es venta por pantalla 
 
   orderId String
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
